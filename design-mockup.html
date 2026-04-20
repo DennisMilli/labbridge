@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1440" />
+  <title>LabBridge — Design Mockup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #07080f;
+      color: #fff;
+      width: 1440px;
+      min-height: 900px;
+      overflow-x: hidden;
+    }
+
+    /* ── Background ── */
+    .bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+    }
+    .orb-1 {
+      width: 800px; height: 800px;
+      top: -200px; left: -200px;
+      background: radial-gradient(circle at 40% 40%, rgba(124,58,237,0.65) 0%, rgba(109,40,217,0.3) 40%, transparent 65%);
+      filter: blur(80px);
+    }
+    .orb-2 {
+      width: 700px; height: 700px;
+      top: -100px; right: -100px;
+      background: radial-gradient(circle at 60% 30%, rgba(37,99,235,0.55) 0%, rgba(29,78,216,0.25) 45%, transparent 65%);
+      filter: blur(90px);
+    }
+    .orb-3 {
+      width: 900px; height: 600px;
+      bottom: -200px; left: 50%;
+      transform: translateX(-50%);
+      background: radial-gradient(circle at 50% 70%, rgba(139,92,246,0.4) 0%, rgba(167,139,250,0.15) 50%, transparent 70%);
+      filter: blur(100px);
+    }
+    .orb-center {
+      width: 700px; height: 700px;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(ellipse at center, rgba(109,40,217,0.3) 0%, rgba(79,70,229,0.15) 40%, transparent 70%);
+      filter: blur(80px);
+    }
+    .grid-overlay {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 72px 72px;
+    }
+
+    /* ── Layout ── */
+    .page {
+      position: relative;
+      z-index: 1;
+      min-height: 900px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Ticker ── */
+    .ticker {
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.02);
+      padding: 8px 0;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .ticker-inner {
+      display: inline-flex;
+      gap: 0;
+    }
+    .tick {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 20px;
+      font-size: 13px;
+    }
+    .tick-sym { color: #9ca3af; font-weight: 600; }
+    .tick-price { color: #fff; font-weight: 700; }
+    .tick-up { color: #34d399; font-size: 11px; font-weight: 700; }
+    .tick-down { color: #f87171; font-size: 11px; font-weight: 700; }
+    .tick-dot { color: #374151; }
+
+    /* ── Nav ── */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 64px;
+      max-width: 1440px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .logo-icon {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: rgba(139,92,246,0.2);
+      border: 1px solid rgba(139,92,246,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .logo-text {
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.5px;
+    }
+    .logo-text span { color: #a78bfa; }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+    .nav-link {
+      color: #9ca3af;
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+    }
+    .nav-btn {
+      padding: 8px 20px;
+      border-radius: 24px;
+      background: rgba(139,92,246,0.15);
+      border: 1px solid rgba(139,92,246,0.35);
+      color: #c4b5fd;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 40px 64px 60px;
+      max-width: 1440px;
+      margin: 0 auto;
+      width: 100%;
+      gap: 80px;
+    }
+
+    .hero-left {
+      flex: 1;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 24px;
+      background: rgba(124,58,237,0.15);
+      border: 1px solid rgba(124,58,237,0.3);
+      font-size: 12px;
+      font-weight: 600;
+      color: #c4b5fd;
+      margin-bottom: 24px;
+    }
+    .badge-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #34d399;
+      box-shadow: 0 0 6px #34d399;
+    }
+
+    h1 {
+      font-size: 72px;
+      font-weight: 900;
+      line-height: 1.02;
+      letter-spacing: -2px;
+      margin-bottom: 20px;
+    }
+    h1 .gradient {
+      background: linear-gradient(135deg, #a78bfa 0%, #818cf8 50%, #60a5fa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      color: #9ca3af;
+      font-size: 17px;
+      line-height: 1.7;
+      max-width: 420px;
+      margin-bottom: 40px;
+    }
+
+    .stats {
+      display: flex;
+      gap: 40px;
+    }
+    .stat-val {
+      font-size: 28px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -1px;
+    }
+    .stat-label {
+      font-size: 13px;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+
+    /* ── Glass Card ── */
+    .card {
+      width: 440px;
+      flex-shrink: 0;
+      border-radius: 28px;
+      padding: 28px;
+      background: linear-gradient(135deg, rgba(139,92,246,0.12) 0%, rgba(255,255,255,0.06) 50%, rgba(59,130,246,0.08) 100%);
+      backdrop-filter: blur(40px);
+      -webkit-backdrop-filter: blur(40px);
+      border: 1px solid rgba(255,255,255,0.15);
+      box-shadow:
+        0 0 0 1px rgba(124,58,237,0.2),
+        0 24px 80px rgba(0,0,0,0.5),
+        0 0 120px rgba(124,58,237,0.18),
+        inset 0 1px 0 rgba(255,255,255,0.12);
+    }
+
+    .card-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+
+    .token-box {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 18px;
+      padding: 16px 20px;
+      margin-top: 10px;
+    }
+    .token-box-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .chain-badges {
+      display: flex;
+      gap: 4px;
+    }
+    .chain-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 20px;
+    }
+    .chain-eth { background: rgba(98,126,234,0.2); color: #627eea; border: 1px solid rgba(98,126,234,0.3); }
+    .chain-arb { background: rgba(40,160,240,0.2); color: #28a0f0; border: 1px solid rgba(40,160,240,0.3); }
+    .chain-pol { background: rgba(130,71,229,0.2); color: #8247e5; border: 1px solid rgba(130,71,229,0.3); }
+
+    .token-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .amount-input {
+      font-size: 36px;
+      font-weight: 800;
+      color: rgba(255,255,255,0.15);
+      letter-spacing: -1px;
+    }
+    .token-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 14px;
+      padding: 8px 14px;
+    }
+    .token-icon {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+    }
+    .token-sym {
+      font-size: 15px;
+      font-weight: 800;
+      color: #fff;
+    }
+    .chevron {
+      color: #6b7280;
+      font-size: 10px;
+    }
+
+    .swap-row {
+      display: flex;
+      justify-content: center;
+      margin: 10px 0;
+    }
+    .swap-btn {
+      width: 38px; height: 38px;
+      border-radius: 12px;
+      background: rgba(124,58,237,0.2);
+      border: 1px solid rgba(124,58,237,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: #a78bfa;
+    }
+
+    .info-row {
+      margin-top: 14px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .info-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .info-val { font-weight: 600; }
+    .info-val.white { color: #e5e7eb; }
+    .info-val.green { color: #34d399; }
+    .info-val.blue { color: #60a5fa; }
+    .info-val.violet { color: #a78bfa; }
+
+    .cta-btn {
+      margin-top: 16px;
+      width: 100%;
+      padding: 18px;
+      border-radius: 18px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #7c3aed, #2563eb);
+      box-shadow: 0 4px 32px rgba(124,58,237,0.45);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      letter-spacing: -0.2px;
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid rgba(255,255,255,0.06);
+      padding: 20px 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .footer-left {
+      font-size: 13px;
+      color: #4b5563;
+    }
+    .footer-left b { color: #9ca3af; }
+    .socials {
+      display: flex;
+      gap: 20px;
+    }
+    .social { color: #4b5563; font-size: 16px; text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<!-- Background -->
+<div class="bg">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+  <div class="orb orb-center"></div>
+  <div class="grid-overlay"></div>
+</div>
+
+<div class="page">
+
+  <!-- Ticker -->
+  <div class="ticker">
+    <div class="ticker-inner">
+      <span class="tick"><span class="tick-sym">BTC</span><span class="tick-price">$77,409</span><span class="tick-up">▲ 2.81%</span><span class="tick-dot">•</span></span>
+      <span class="tick"><span class="tick-sym">ETH</span><span class="tick-price">$2,431</span><span class="tick-up">▲ 3.10%</span><span class="tick-dot">•</span></span>
+      <span class="tick"><span class="tick-sym">SOL</span><span class="tick-price">$89.49</span><span class="tick-down">▼ 0.02%</span><span class="tick-dot">•</span></span>
+      <span class="tick"><span class="tick-sym">BNB</span><span class="tick-price">$642.05</span><span class="tick-up">▲ 0.87%</span><span class="tick-dot">•</span></span>
+      <span class="tick"><span class="tick-sym">USDC</span><span class="tick-price">$1.00</span><span class="tick-down">▼ 0.00%</span><span class="tick-dot">•</span></span>
+      <span class="tick"><span class="tick-sym">LINK</span><span class="tick-price">$9.69</span><span class="tick-up">▲ 0.76%</span><span class="tick-dot">•</span></span>
+      <span class="tick"><span class="tick-sym">UNI</span><span class="tick-price">$3.51</span><span class="tick-up">▲ 1.47%</span><span class="tick-dot">•</span></span>
+      <span class="tick"><span class="tick-sym">AVAX</span><span class="tick-price">$9.82</span><span class="tick-down">▼ 0.01%</span><span class="tick-dot">•</span></span>
+      <span class="tick"><span class="tick-sym">MATIC</span><span class="tick-price">$0.38</span><span class="tick-up">▲ 1.22%</span><span class="tick-dot">•</span></span>
+      <span class="tick"><span class="tick-sym">ARB</span><span class="tick-price">$0.31</span><span class="tick-up">▲ 2.04%</span><span class="tick-dot">•</span></span>
+      <span class="tick"><span class="tick-sym">OP</span><span class="tick-price">$0.64</span><span class="tick-up">▲ 1.88%</span><span class="tick-dot">•</span></span>
+      <span class="tick"><span class="tick-sym">AAVE</span><span class="tick-price">$141.20</span><span class="tick-up">▲ 0.54%</span><span class="tick-dot">•</span></span>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <nav>
+    <div class="logo">
+      <div class="logo-icon">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M8 2L14 5.5V10.5L8 14L2 10.5V5.5L8 2Z" stroke="#a78bfa" stroke-width="1.5" fill="none"/>
+          <circle cx="8" cy="8" r="2" fill="#a78bfa"/>
+        </svg>
+      </div>
+      <span class="logo-text">Lab<span>Bridge</span></span>
+    </div>
+    <div class="nav-links">
+      <a href="#" class="nav-link">About</a>
+      <a href="#" class="nav-link">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="display:inline;vertical-align:middle;margin-right:4px"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+        GitHub
+      </a>
+      <button class="nav-btn">Connect Wallet</button>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <div class="hero">
+
+    <!-- Left: Copy -->
+    <div class="hero-left">
+      <div class="badge">
+        <div class="badge-dot"></div>
+        Powered by Across Protocol v4
+      </div>
+
+      <h1>
+        Bridge<br>
+        <span class="gradient">Any Chain.</span>
+      </h1>
+
+      <p class="hero-sub">
+        Instant cross-chain crypto transfers with live rates from CoinGecko. Move ETH, USDC, and 50+ tokens across Ethereum, Arbitrum, Base, Polygon, and more.
+      </p>
+
+      <div class="stats">
+        <div>
+          <div class="stat-val">$2.4B+</div>
+          <div class="stat-label">Total Volume</div>
+        </div>
+        <div>
+          <div class="stat-val">7+</div>
+          <div class="stat-label">Chains</div>
+        </div>
+        <div>
+          <div class="stat-val">~4 sec</div>
+          <div class="stat-label">Avg. Transfer</div>
+        </div>
+        <div>
+          <div class="stat-val">50+</div>
+          <div class="stat-label">Tokens</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Glass Card -->
+    <div class="card">
+
+      <!-- FROM -->
+      <div class="token-box">
+        <div class="token-box-header">
+          <span class="card-label">From</span>
+          <div class="chain-badges">
+            <span class="chain-badge chain-eth">Ethereum</span>
+            <span class="chain-badge chain-arb">Arbitrum</span>
+            <span class="chain-badge chain-pol">Polygon</span>
+          </div>
+        </div>
+        <div class="token-row">
+          <span class="amount-input">0.0</span>
+          <div class="token-btn">
+            <img class="token-icon" src="https://coin-images.coingecko.com/coins/images/279/large/ethereum.png?1696501628" alt="ETH" />
+            <span class="token-sym">ETH</span>
+            <span class="chevron">▾</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Swap -->
+      <div class="swap-row">
+        <div class="swap-btn">↓</div>
+      </div>
+
+      <!-- TO -->
+      <div class="token-box">
+        <div class="token-box-header">
+          <span class="card-label">To</span>
+          <div class="chain-badges">
+            <span class="chain-badge chain-eth">Ethereum</span>
+            <span class="chain-badge chain-arb">Arbitrum</span>
+            <span class="chain-badge chain-pol">Polygon</span>
+          </div>
+        </div>
+        <div class="token-row">
+          <span class="amount-input">0.0</span>
+          <div class="token-btn">
+            <img class="token-icon" src="https://coin-images.coingecko.com/coins/images/6319/large/USDC.png?1769615602" alt="USDC" />
+            <span class="token-sym">USDC</span>
+            <span class="chevron">▾</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Info -->
+      <div class="info-row">
+        <div class="info-line">
+          <span>Exchange Rate</span>
+          <span class="info-val white">1 ETH = 2,431.65 USDC</span>
+        </div>
+        <div class="info-line">
+          <span>Bridge Fee</span>
+          <span class="info-val green">~$0.12</span>
+        </div>
+        <div class="info-line">
+          <span>Est. Time</span>
+          <span class="info-val blue">~4 seconds</span>
+        </div>
+        <div class="info-line">
+          <span>Powered by</span>
+          <span class="info-val violet">Across Protocol</span>
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <button class="cta-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21 18v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1M13 12H3m10 0-4-4m4 4-4 4M21 12h-8"/></svg>
+        Connect Wallet to Bridge
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-left">
+      <b>LabBridge</b> — Capstone 8 by Dennis Akinkuotu
+    </div>
+    <div class="socials">
+      <a href="#" class="social">GitHub</a>
+      <a href="#" class="social">Twitter</a>
+      <a href="#" class="social">Instagram</a>
+      <a href="#" class="social">LinkedIn</a>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

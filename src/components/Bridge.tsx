@@ -211,8 +211,8 @@ function Bridge({ tokens, loading, wallet, onOpenWallet }: BridgeProps) {
   return (
     <>
     <main
-      className="flex flex-col lg:flex-row items-center justify-center gap-16 lg:gap-24 w-full max-w-6xl mx-auto"
-      style={{ padding: "5rem 4rem", minHeight: "calc(100vh - 140px)" }}
+      className="flex flex-col lg:flex-row items-center justify-center gap-10 lg:gap-24 w-full max-w-6xl mx-auto px-4 sm:px-8 lg:px-16 py-10 sm:py-16 lg:py-20"
+      style={{ minHeight: "calc(100vh - 140px)" }}
     >
       {/* ── Hero copy ── */}
       <motion.div
@@ -282,7 +282,7 @@ function Bridge({ tokens, loading, wallet, onOpenWallet }: BridgeProps) {
 
       {/* ── Converter card ── */}
       <motion.div
-        className="w-full max-w-[420px] mx-auto lg:mx-0 flex-shrink-0 relative overflow-hidden flex flex-col gap-5 p-6"
+        className="w-full max-w-[520px] lg:max-w-[440px] mx-auto lg:mx-0 flex-shrink-0 relative overflow-hidden flex flex-col gap-5 p-5 sm:p-6"
         style={{
           background: "var(--glass-strong)",
           border: "1px solid var(--glass-border)",

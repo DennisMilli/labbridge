@@ -5,7 +5,7 @@
 
 ![LabBridge](./public/labbridge-hero.png)
 
-**[Live Demo →](https://labbridge.vercel.app)** · **Capstone Project #8** · Built by [@DennisMilli](https://github.com/DennisMilli)
+**[Live Demo →](https://labbridge-app.vercel.app)** · Built by [@DennisMilli](https://github.com/DennisMilli)
 
 ---
 

@@ -85,8 +85,8 @@ function ReviewModal({
     <>
       {/* Backdrop */}
       <motion.div
-        className="fixed inset-0 z-[150]"
-        style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(12px)" }}
+        className="fixed inset-0 z-[150] modal-backdrop"
+        style={{ background: "rgba(0,0,0,0.55)" }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}

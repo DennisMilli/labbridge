@@ -74,8 +74,8 @@ function WalletSidebar({ wallet, onConnect, onDisconnect, onClose }: WalletSideb
     <>
       {/* Backdrop */}
       <motion.div
-        className="fixed inset-0 z-[150]"
-        style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(10px)" }}
+        className="fixed inset-0 z-[150] modal-backdrop"
+        style={{ background: "rgba(0,0,0,0.5)" }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}

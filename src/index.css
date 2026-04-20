@@ -105,3 +105,9 @@ input[type="number"] {
 .input-box:focus-within {
   border-color: rgba(0,245,212,0.4);
 }
+
+/* ── Modal backdrop blur (vendor-prefixed for Safari) ── */
+.modal-backdrop {
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}

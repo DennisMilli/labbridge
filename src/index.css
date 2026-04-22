@@ -36,6 +36,11 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Disable the browser's faux-bold/italic fallback: if a weight isn't in our
+     loaded font files, render in the nearest available weight rather than
+     smearing pixels (which looks especially bad on backdrop-filter surfaces). */
+  font-synthesis: none;
 }
 
 /* ── Orb drift animation ── */

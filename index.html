@@ -6,7 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!--
+      IMPORTANT: load every weight the app actually uses. If the browser asks
+      for a weight that isn't in this URL, it falls back to "faux bold" by
+      smearing pixels of the nearest weight, which looks blurry/broken on
+      retina (especially on glass surfaces). Pair this with `font-synthesis:
+      none` in CSS so a missing weight surfaces as an obvious styling bug
+      instead of a silent smear.
+    -->
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <title>LabBridge — Cross-Chain Crypto Bridge</title>
   </head>
   <body>

@@ -108,6 +108,111 @@ input[type="number"] {
 
 /* ── Modal backdrop blur (vendor-prefixed for Safari) ── */
 .modal-backdrop {
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   LIQUID GLASS SYSTEM
+   Glassmorphism = frosted panel. Liquid glass = glassmorphism + refraction:
+   - inner top highlight  → light hitting the top edge of a lens
+   - inner bottom shadow  → glass has thickness/depth
+   - soft specular sheen  → 45° gradient catching ambient light
+   - saturated backdrop   → glass bends color, it doesn't just blur
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Panels: cards, sidebars, the bridge converter */
+.liquid-glass {
+  position: relative;
+  background: rgba(255, 255, 255, 0.05);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  backdrop-filter: blur(28px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.28),
+    0 16px 48px rgba(0, 0, 0, 0.28);
+}
+.liquid-glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.10) 0%,
+    rgba(255, 255, 255, 0.02) 35%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+.liquid-glass > * { position: relative; z-index: 1; }
+
+/* Primary CTA button — glass surface with cyan tint underneath */
+.liquid-glass-cta {
+  position: relative;
+  isolation: isolate; /* local stacking context — keeps text above ::after */
+  background: linear-gradient(135deg, rgba(0, 245, 212, 0.98), rgba(0, 184, 160, 0.98));
+  color: #050b14;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08),
+    0 4px 14px rgba(0, 245, 212, 0.14);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.15s ease;
+}
+/* Soft radial top sheen — no hard edges, no "box inside box" */
+.liquid-glass-cta::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% -30%,
+    rgba(255, 255, 255, 0.30) 0%,
+    rgba(255, 255, 255, 0) 55%);
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 0;
+}
+.liquid-glass-cta > * { position: relative; z-index: 1; }
+.liquid-glass-cta:hover:not(:disabled) {
+  filter: brightness(1.04);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.40),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08),
+    0 6px 18px rgba(0, 245, 212, 0.20);
+}
+.liquid-glass-cta:active:not(:disabled) { transform: translateY(1px); }
+
+/* Secondary / outlined glass button — used for Connect Wallet etc. */
+.liquid-glass-button {
+  position: relative;
+  background: rgba(255, 255, 255, 0.07);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18),
+    0 8px 24px rgba(0, 0, 0, 0.22);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.liquid-glass-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.11);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+/* Small glass chip — for nav pills, gas chip, supported-chain tags */
+.liquid-glass-chip {
+  background: rgba(255, 255, 255, 0.06);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 4px 12px rgba(0, 0, 0, 0.18);
 }

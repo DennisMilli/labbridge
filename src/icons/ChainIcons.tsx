@@ -1,9 +1,8 @@
 /**
  * Chain icons — approximate but recognizable SVG marks in each chain's brand color.
- * Keyed by EVM chainId for easy lookup.
+ * Each icon is exported individually; chain metadata (name + color + icon
+ * lookup by chainId) lives in `./chainMeta.ts`.
  */
-import type { ReactElement } from "react"
-
 interface IconProps { size?: number; className?: string }
 
 export function EthereumIcon({ size = 20, className }: IconProps) {
@@ -67,6 +66,26 @@ export function OptimismIcon({ size = 20, className }: IconProps) {
   )
 }
 
+export function SolanaIcon({ size = 20, className }: IconProps) {
+  const gid = `sol-${size}`
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id={gid} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#9945FF"/>
+          <stop offset="100%" stopColor="#14F195"/>
+        </linearGradient>
+      </defs>
+      <circle cx="12" cy="12" r="12" fill="#0b0b0f"/>
+      <g fill={`url(#${gid})`}>
+        <path d="M7.2 8.3h10.6c.2 0 .3.2.1.4l-1.6 1.6a.4.4 0 0 1-.3.1H5.4c-.2 0-.3-.2-.1-.4L6.9 8.4a.4.4 0 0 1 .3-.1Z"/>
+        <path d="M7.2 13.6h10.6c.2 0 .3.2.1.4L16.3 15.6a.4.4 0 0 1-.3.1H5.4c-.2 0-.3-.2-.1-.4l1.6-1.6a.4.4 0 0 1 .3-.1Z"/>
+        <path d="M16 10.9H5.4c-.2 0-.3.2-.1.4l1.6 1.6c.1.1.2.1.3.1h10.6c.2 0 .3-.2.1-.4l-1.6-1.6a.4.4 0 0 0-.3-.1Z"/>
+      </g>
+    </svg>
+  )
+}
+
 export function AllChainsIcon({ size = 20, className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" className={className} xmlns="http://www.w3.org/2000/svg">
@@ -76,13 +95,10 @@ export function AllChainsIcon({ size = 20, className }: IconProps) {
   )
 }
 
-export const CHAIN_META: Record<number, { name: string; color: string; Icon: (p: IconProps) => ReactElement }> = {
-  1:     { name: "Ethereum", color: "#627EEA", Icon: EthereumIcon },
-  42161: { name: "Arbitrum", color: "#28A0F0", Icon: ArbitrumIcon },
-  137:   { name: "Polygon",  color: "#8247E5", Icon: PolygonIcon  },
-  8453:  { name: "Base",     color: "#0052FF", Icon: BaseIcon     },
-  10:    { name: "Optimism", color: "#FF0420", Icon: OptimismIcon },
-}
+// Convenience component that renders the right icon for a given chainId.
+// CHAIN_META lives in `./chainMeta.ts` so this file stays "components only"
+// for Vite Fast Refresh.
+import { CHAIN_META } from "./chainMeta"
 
 export function ChainIcon({ chainId, size = 20, className }: { chainId: number; size?: number; className?: string }) {
   const meta = CHAIN_META[chainId]

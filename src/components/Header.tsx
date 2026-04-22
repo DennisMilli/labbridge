@@ -1,10 +1,59 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { AnimatePresence, motion } from "framer-motion"
 import { FaGithub } from "react-icons/fa6"
 import Ticker from "./Ticker"
 import type { TickerItem, WalletInfo } from "../App"
 import { Identicon } from "../icons/Identicon"
+
+/**
+ * GasChip — live ETH mainnet gas price (gwei). Refreshes every 30s.
+ * Tiny green dot pulses to signal "live". Desktop-only so it doesn't
+ * clutter the mobile header.
+ */
+function GasChip() {
+  const [gwei, setGwei] = useState<number | null>(null)
+
+  useEffect(() => {
+    const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001"
+    let cancelled = false
+    async function load() {
+      try {
+        const res = await fetch(`${API_URL}/api/gas`)
+        if (!res.ok) return
+        const data = await res.json()
+        if (!cancelled && typeof data.gwei === "number") setGwei(data.gwei)
+      } catch { /* silent */ }
+    }
+    load()
+    const t = setInterval(load, 30_000)
+    return () => { cancelled = true; clearInterval(t) }
+  }, [])
+
+  if (gwei === null) return null
+  // Color tier based on typical mainnet bands
+  const color = gwei < 15 ? "var(--green)" : gwei < 40 ? "#fbbf24" : "var(--red)"
+
+  return (
+    <div
+      className="liquid-glass-chip hidden md:flex items-center gap-2 rounded-full"
+      style={{ padding: "0.4rem 0.75rem" }}
+      title="Ethereum mainnet gas price"
+    >
+      <span
+        className="w-1.5 h-1.5 rounded-full shrink-0"
+        style={{ background: color, animation: "pulse-dot 1.8s ease-in-out infinite" }}
+      />
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ color: "var(--text-muted)" }}>
+        <path d="M3 20h11V4H3v16ZM14 9l4-2v11a2 2 0 0 0 2 2M18 13l2-1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+      <span className="num text-[0.72rem] font-semibold" style={{ color: "var(--text)" }}>
+        {gwei}
+      </span>
+      <span className="text-[0.65rem]" style={{ color: "var(--text-dim)" }}>gwei</span>
+    </div>
+  )
+}
 
 interface HeaderProps {
   tickers: TickerItem[]
@@ -117,34 +166,32 @@ function Header({ tickers, wallet, onOpenWallet }: HeaderProps) {
           ))}
         </div>
 
-        {/* ── Right: GitHub + Wallet (desktop) + Hamburger (mobile) ── */}
+        {/* ── Right: Gas chip + GitHub + Wallet (desktop) + Hamburger (mobile) ── */}
         <div className="flex items-center gap-3 shrink-0">
-          {/* GitHub icon-only (desktop) */}
+          {/* Live gas price (desktop only) */}
+          <GasChip />
+
+          {/* GitHub icon-only (desktop) — liquid glass */}
           <a
-            href="https://github.com/DennisMilli"
+            href="https://github.com/DennisMilli/labbridge"
             target="_blank"
             rel="noreferrer"
-            className="hidden md:flex items-center justify-center rounded-xl transition-all hover:brightness-125"
-            style={{
-              width: 38, height: 38,
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid var(--glass-border)",
-              color: "var(--text-muted)",
-            }}
+            className="liquid-glass-button hidden md:flex items-center justify-center rounded-xl"
+            style={{ width: 38, height: 38, color: "var(--text-muted)" }}
             title="GitHub"
           >
             <FaGithub className="text-sm" />
           </a>
 
-          {/* Wallet button — responsive (always visible, compact on mobile) */}
+          {/* Wallet button — liquid glass, responsive */}
           {wallet ? (
             <button
               onClick={onOpenWallet}
-              className="flex items-center gap-2 transition-all hover:brightness-110 cursor-pointer"
+              className="liquid-glass-button flex items-center gap-2 cursor-pointer"
               style={{
-                background: "rgba(0,245,212,0.08)",
-                border: "1px solid rgba(0,245,212,0.25)",
-                padding: "0.3rem 0.65rem 0.3rem 0.3rem",
+                background: "rgba(0,245,212,0.10)",
+                borderColor: "rgba(0,245,212,0.30)",
+                padding: "0.3rem 0.75rem 0.3rem 0.3rem",
                 borderRadius: 100,
               }}
             >
@@ -152,11 +199,7 @@ function Header({ tickers, wallet, onOpenWallet }: HeaderProps) {
               <span className="flex flex-col items-start leading-tight">
                 <span
                   className="num"
-                  style={{
-                    fontWeight: 600,
-                    fontSize: "0.78rem",
-                    color: "var(--text)",
-                  }}
+                  style={{ fontWeight: 600, fontSize: "0.78rem", color: "var(--text)" }}
                 >
                   {wallet.balances.eth?.toFixed(3) ?? "0.000"} ETH
                 </span>
@@ -168,21 +211,17 @@ function Header({ tickers, wallet, onOpenWallet }: HeaderProps) {
           ) : (
             <button
               onClick={onOpenWallet}
-              className="hidden sm:flex items-center gap-2 transition-all hover:brightness-110 cursor-pointer"
+              className="liquid-glass-cta hidden sm:flex items-center gap-2 cursor-pointer"
               style={{
-                background: "linear-gradient(135deg, var(--cyan), #00b8a0)",
-                color: "#050b14",
-                border: "none",
                 padding: "0.55rem 1.15rem",
                 borderRadius: 100,
                 fontFamily: "var(--font-body)",
                 fontSize: "0.82rem",
                 fontWeight: 600,
-                boxShadow: "0 6px 20px rgba(0,245,212,0.25)",
               }}
             >
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#050b14", opacity: 0.5 }} />
-              Connect Wallet
+              <span className="relative z-10 w-1.5 h-1.5 rounded-full" style={{ background: "#050b14", opacity: 0.5 }} />
+              <span className="relative z-10">Connect Wallet</span>
             </button>
           )}
 
@@ -256,7 +295,7 @@ function Header({ tickers, wallet, onOpenWallet }: HeaderProps) {
               ))}
 
               <a
-                href="https://github.com/DennisMilli"
+                href="https://github.com/DennisMilli/labbridge"
                 target="_blank"
                 rel="noreferrer"
                 onClick={() => setMenuOpen(false)}
@@ -270,16 +309,16 @@ function Header({ tickers, wallet, onOpenWallet }: HeaderProps) {
             <div className="p-3" style={{ borderTop: "1px solid var(--glass-border)" }}>
               <button
                 onClick={() => { setMenuOpen(false); onOpenWallet() }}
-                className="w-full flex items-center justify-center gap-2 cursor-pointer"
+                className={`w-full flex items-center justify-center gap-2 cursor-pointer ${wallet ? "liquid-glass-button" : "liquid-glass-cta"}`}
                 style={{
-                  background: wallet ? "rgba(0,245,212,0.08)" : "linear-gradient(135deg, var(--cyan), #00b8a0)",
-                  color: wallet ? "var(--text)" : "#050b14",
-                  border: wallet ? "1px solid rgba(0,245,212,0.25)" : "none",
                   padding: "0.8rem 1.2rem",
                   borderRadius: 14,
                   fontFamily: "var(--font-body)",
                   fontSize: "0.9rem",
                   fontWeight: 600,
+                  ...(wallet
+                    ? { background: "rgba(0,245,212,0.10)", borderColor: "rgba(0,245,212,0.30)", color: "var(--text)" }
+                    : {}),
                 }}
               >
                 {wallet ? (

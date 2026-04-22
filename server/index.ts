@@ -10,11 +10,12 @@ app.use(cors())
 app.use(express.json())
 
 // ─── Across Protocol: chains & supported tokens ────────────────────────────
-// Across v3 supports these chains
-const ACROSS_CHAIN_IDS = [1, 42161, 137, 8453, 10, 59144, 324] // ETH, ARB, Polygon, Base, OP, Linea, zkSync
-
+// Across supports 5 EVM chains (v3/v4) plus Solana via the SOLANA sentinel
+// below. Native BTC and other non-EVM chains are NOT bridgeable. Per-token
+// chain support lives in ACROSS_TOKEN_CHAINS further down.
+//
 // ─── Token address registry: symbol → chainId → { address, decimals } ───
-// Addresses Across uses for /suggested-fees (WETH for native ETH).
+// Only tokens Across actually bridges. Addresses used for /suggested-fees.
 const TOKEN_ADDRESSES: Record<string, Record<number, { address: string; decimals: number }>> = {
   eth: {
     1:     { address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", decimals: 18 }, // WETH
@@ -54,44 +55,29 @@ const TOKEN_ADDRESSES: Record<string, Record<number, { address: string; decimals
     137:   { address: "0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6", decimals: 8 },
     8453:  { address: "0x0555E30da8f98308EdB960aa94C0Db47230d2B9c", decimals: 8 },
   },
+  bal: {
+    1:     { address: "0xba100000625a3754423978a60c9317c58a424e3D", decimals: 18 },
+    42161: { address: "0x040d1eDC9569d4Bab2D15287Dc5A4F10F56a56B8", decimals: 18 },
+    137:   { address: "0x9a71012B13CA4d3D0Cdc72A177DF3ef03b0E76A3", decimals: 18 },
+    8453:  { address: "0x4158734D47Fc9692176B5085E0F52ee0Da5d47F1", decimals: 18 },
+  },
 }
 
-// Map CoinGecko ID → which chains Across supports for that token
+// Solana sentinel — not a real EVM chainId, used by Across for SVM routing.
+const SOLANA = 34268394551451
+
+// ─── Across-bridgeable tokens: CoinGecko id → chains Across actually supports ──
+// This map is the SOURCE OF TRUTH. Only tokens listed here appear in the picker.
+// Native BTC ("bitcoin") is excluded — not bridgeable. WBTC covers the EVM side.
+// Native SOL ("solana") lives on its own chain. Across V4 bridges USDC ↔ Solana.
 const ACROSS_TOKEN_CHAINS: Record<string, number[]> = {
-  ethereum: [1, 42161, 137, 8453, 10, 59144, 324],
-  "usd-coin": [1, 42161, 137, 8453, 10],
-  tether: [1, 42161, 137, 8453, 10],
+  ethereum:          [1, 42161, 137, 8453, 10],                // WETH wraps on all 5
+  "usd-coin":        [1, 42161, 137, 8453, 10, SOLANA],        // USDC — includes Solana
+  tether:            [1, 42161, 137, 10],                       // no Base USDT
+  dai:               [1, 42161, 137, 10],
   "wrapped-bitcoin": [1, 42161, 137, 8453],
-  "dai": [1, 42161, 137, 8453, 10],
-  "bridged-usdc-polygon-pos-bridge": [137],
-  "matic-network": [1, 137],
-  "arbitrum": [1, 42161],
-  "optimism": [1, 10],
-  "chainlink": [1, 42161, 137, 8453, 10],
-  "uniswap": [1, 42161, 137, 8453],
-  "aave": [1, 42161, 137, 8453, 10],
-  "compound-governance-token": [1, 42161],
-  "maker": [1, 42161],
-  "1inch": [1, 137, 42161],
-  "curve-dao-token": [1, 42161, 137],
-  "balancer": [1, 42161, 137],
-  "the-graph": [1, 42161, 137],
-  "lido-dao": [1, 42161],
-  "frax": [1, 42161, 137, 10],
-  "frax-ether": [1, 42161, 10],
-  "staked-ether": [1, 42161, 137],
-  "rocketpool-eth": [1, 42161],
-  "coinbase-wrapped-staked-eth": [1, 8453],
-}
-
-// Across-supported token symbols for fee estimation
-const ACROSS_SYMBOL_MAP: Record<string, string> = {
-  ethereum: "WETH",
-  "usd-coin": "USDC",
-  tether: "USDT",
-  "wrapped-bitcoin": "WBTC",
-  dai: "DAI",
-  "matic-network": "MATIC",
+  balancer:          [1, 42161, 137, 8453],
+  solana:            [SOLANA],                                  // SOL lives only on Solana
 }
 
 // ─── /api/tokens — CoinGecko top coins ────────────────────────────────────
@@ -99,10 +85,30 @@ app.get("/api/tokens", async (_req, res) => {
   try {
     const cgKey = process.env.COINGECKO_KEY || ""
     const validKey = cgKey && cgKey !== "your_coingecko_key_here"
-    const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=50&page=1&sparkline=false&price_change_percentage=24h${validKey ? `&x_cg_demo_api_key=${cgKey}` : ""}`
+    const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=150&page=1&sparkline=false&price_change_percentage=24h${validKey ? `&x_cg_demo_api_key=${cgKey}` : ""}`
 
     const { data } = await axios.get(url)
 
+    // ── Tickers for the marquee: we still show the top 20 movers from CoinGecko
+    //    (including BTC, SOL, etc.) so the live strip feels like a real market.
+    const tickers = data.slice(0, 20).map((coin: {
+      symbol: string
+      name: string
+      current_price: number
+      price_change_percentage_24h: number
+    }) => ({
+      symbol: coin.symbol,
+      name:   coin.name,
+      price:  coin.current_price >= 1
+        ? `$${coin.current_price.toLocaleString("en-US", { maximumFractionDigits: 2 })}`
+        : `$${(coin.current_price ?? 0).toFixed(6)}`,
+      change: parseFloat((coin.price_change_percentage_24h ?? 0).toFixed(2)),
+    }))
+
+    // ── Tokens for the bridge picker: return ALL top market-cap coins so the
+    //    picker feels like a real exchange. Tokens Across can bridge get a
+    //    `bridgeable: true` flag + their chain list; everything else gets
+    //    `bridgeable: false` with an empty chain list (shown for discovery).
     const tokens = data.map((coin: {
       id: string
       symbol: string
@@ -110,31 +116,22 @@ app.get("/api/tokens", async (_req, res) => {
       image: string
       current_price: number
       price_change_percentage_24h: number
-    }) => ({
-      id: coin.id,
-      symbol: coin.symbol,
-      name: coin.name,
-      logo: coin.image,
-      priceUsd: coin.current_price || 0,
-      change24h: coin.price_change_percentage_24h || 0,
-      chainIds: ACROSS_TOKEN_CHAINS[coin.id] || [1], // default to Ethereum mainnet
-    }))
+    }) => {
+      const chains = ACROSS_TOKEN_CHAINS[coin.id]
+      return {
+        id:         coin.id,
+        symbol:     coin.symbol,
+        name:       coin.name,
+        logo:       coin.image,
+        priceUsd:   coin.current_price || 0,
+        change24h:  coin.price_change_percentage_24h || 0,
+        chainIds:   chains ?? [],
+        bridgeable: !!chains,
+      }
+    })
 
-    // Tickers: top 20 for the marquee
-    const tickers = tokens.slice(0, 20).map((t: {
-      symbol: string
-      name: string
-      priceUsd: number
-      change24h: number
-    }) => ({
-      symbol: t.symbol,
-      name: t.name,
-      price: t.priceUsd >= 1
-        ? `$${t.priceUsd.toLocaleString("en-US", { maximumFractionDigits: 2 })}`
-        : `$${t.priceUsd.toFixed(6)}`,
-      change: parseFloat(t.change24h.toFixed(2)),
-    }))
-
+    const bridgeableCount = tokens.filter((t: { bridgeable: boolean }) => t.bridgeable).length
+    console.log(`[api/tokens] ${tokens.length} tokens (${bridgeableCount} bridgeable via Across)`)
     res.json({ tokens, tickers })
   } catch (err) {
     console.error("CoinGecko error:", err)
@@ -271,6 +268,28 @@ app.get("/api/across-fee", async (req, res) => {
       estimatedTime: "—",
       source: "fallback",
     })
+  }
+})
+
+// ─── /api/gas — Ethereum mainnet gas price via public RPC ────────────────────
+// Free, keyless, cached 15s to avoid hammering Cloudflare.
+let gasCache: { gwei: number | null; ts: number } = { gwei: null, ts: 0 }
+app.get("/api/gas", async (_req, res) => {
+  try {
+    if (Date.now() - gasCache.ts < 15_000 && gasCache.gwei !== null) {
+      return res.json({ gwei: gasCache.gwei, cached: true })
+    }
+    const { data } = await axios.post(
+      "https://cloudflare-eth.com",
+      { jsonrpc: "2.0", id: 1, method: "eth_gasPrice", params: [] },
+      { timeout: 4000 },
+    )
+    const wei = parseInt(data.result, 16)
+    const gwei = Math.round((wei / 1e9) * 10) / 10
+    gasCache = { gwei, ts: Date.now() }
+    res.json({ gwei, cached: false })
+  } catch {
+    res.json({ gwei: null })
   }
 })
 

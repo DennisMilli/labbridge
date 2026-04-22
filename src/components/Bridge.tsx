@@ -1,12 +1,13 @@
-import { useState, useEffect, type ReactNode } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { FaArrowDown, FaWallet, FaArrowRight } from "react-icons/fa6"
+import { useState, useEffect, useRef, type ReactNode } from "react"
+import { motion, AnimatePresence, animate } from "framer-motion"
+import { FaArrowDown, FaWallet } from "react-icons/fa6"
 import TokenModal from "./TokenModal"
 import ReviewModal from "./ReviewModal"
 import BridgeHistory, { type BridgeTx } from "./BridgeHistory"
 import type { CryptoToken, WalletInfo } from "../App"
 import { TokenWithChain } from "../icons/TokenWithChain"
-import { ChainIcon, CHAIN_META } from "../icons/ChainIcons"
+import { ChainIcon } from "../icons/ChainIcons"
+import { CHAIN_META } from "../icons/chainMeta"
 
 interface BridgeProps {
   tokens: CryptoToken[]
@@ -16,11 +17,12 @@ interface BridgeProps {
 }
 
 const CHAINS: Record<number, { name: string; color: string }> = {
-  1:     { name: "Ethereum", color: "#627EEA" },
-  42161: { name: "Arbitrum", color: "#28A0F0" },
-  137:   { name: "Polygon",  color: "#8247E5" },
-  8453:  { name: "Base",     color: "#0052FF" },
-  10:    { name: "Optimism", color: "#FF0420" },
+  1:              { name: "Ethereum", color: "#627EEA" },
+  42161:          { name: "Arbitrum", color: "#28A0F0" },
+  137:            { name: "Polygon",  color: "#8247E5" },
+  8453:           { name: "Base",     color: "#0052FF" },
+  10:             { name: "Optimism", color: "#FF0420" },
+  34268394551451: { name: "Solana",   color: "#14F195" },
 }
 
 function TokenButton({ token, chainId, onClick }: { token: CryptoToken | null; chainId: number | null; onClick: () => void }) {
@@ -128,16 +130,29 @@ function Bridge({ tokens, loading, wallet, onOpenWallet }: BridgeProps) {
   const [acrossTime,   setAcrossTime]   = useState<string | null>(null)
   const [acrossSource, setAcrossSource] = useState<string | null>(null)
 
-  // Set defaults once tokens load — pick a real Across route (USDC Eth → USDC Arb)
-  // so the live quote + est-time populate out of the box.
+  // Set defaults once tokens load. Across bridges SAME-asset across chains, so
+  // the honest default is USDC (Ethereum) → USDC (Arbitrum) — a real, working,
+  // live-quotable Across route. User sees a green fee + ETA right away.
+  // The disables below cover legitimate one-time initialization from async-
+  // loaded props; the effect is guarded by !fromToken so it only fires on the
+  // first arrival of `tokens`, never on subsequent renders.
   useEffect(() => {
     if (tokens.length > 0 && !fromToken && !toToken) {
-      const eth  = tokens.find(t => t.symbol.toLowerCase() === "eth")  || tokens[0]
-      const usdc = tokens.find(t => t.symbol.toLowerCase() === "usdc") || tokens[1]
-      setFromToken(eth)
-      setToToken(usdc)
-      setFromChainId(eth.chainIds.includes(1) ? 1 : eth.chainIds[0])
-      setToChainId(usdc.chainIds.includes(42161) ? 42161 : usdc.chainIds[0])
+      const usdc = tokens.find(t => t.symbol.toLowerCase() === "usdc")
+      if (usdc && usdc.chainIds.includes(1) && usdc.chainIds.includes(42161)) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setFromToken(usdc)
+        setToToken(usdc)
+        setFromChainId(1)
+        setToChainId(42161)
+      } else {
+        // Fallback: first bridgeable token, on its first two chains
+        const first = tokens.find(t => t.bridgeable && t.chainIds.length >= 2) || tokens[0]
+        setFromToken(first)
+        setToToken(first)
+        setFromChainId(first.chainIds[0] ?? null)
+        setToChainId(first.chainIds[1] ?? first.chainIds[0] ?? null)
+      }
     }
   }, [tokens, fromToken, toToken])
 
@@ -146,14 +161,39 @@ function Bridge({ tokens, loading, wallet, onOpenWallet }: BridgeProps) {
     return ((parseFloat(amount) * from.priceUsd) / to.priceUsd).toFixed(4)
   }
 
+  // ── Smooth tween for the OTHER input when a conversion updates it ─────────
+  // When user types in "from", "to" is tweened from its current value → target.
+  // Gives the output field a rolling "departure board" feel instead of snapping.
+  const fromTweenRef = useRef<ReturnType<typeof animate> | null>(null)
+  const toTweenRef   = useRef<ReturnType<typeof animate> | null>(null)
+
+  function tweenSet(
+    ref: React.MutableRefObject<ReturnType<typeof animate> | null>,
+    setter: (s: string) => void,
+    currentStr: string,
+    targetStr: string,
+  ) {
+    if (ref.current) ref.current.stop()
+    if (!targetStr) { setter(""); return }
+    const current = parseFloat(currentStr) || 0
+    const target  = parseFloat(targetStr)
+    if (isNaN(target)) { setter(targetStr); return }
+    if (Math.abs(target - current) < 0.0001) { setter(targetStr); return }
+    ref.current = animate(current, target, {
+      duration: 0.35,
+      ease: "easeOut",
+      onUpdate: v => setter(v.toFixed(4)),
+    })
+  }
+
   function handleFromAmountChange(val: string) {
-    setFromAmount(val)
-    setToAmount(convert(val, fromToken, toToken))
+    setFromAmount(val) // user input — snap
+    tweenSet(toTweenRef, setToAmount, toAmount, convert(val, fromToken, toToken))
   }
 
   function handleToAmountChange(val: string) {
-    setToAmount(val)
-    setFromAmount(convert(val, toToken, fromToken))
+    setToAmount(val) // user input — snap
+    tweenSet(fromTweenRef, setFromAmount, fromAmount, convert(val, toToken, fromToken))
   }
 
   function handleSwap() {
@@ -161,25 +201,30 @@ function Bridge({ tokens, loading, wallet, onOpenWallet }: BridgeProps) {
     const pfc = fromChainId, ptc = toChainId
     setFromToken(pt); setToToken(pf)
     setFromChainId(ptc); setToChainId(pfc)
-    if (fromAmount) setToAmount(convert(fromAmount, pt, pf))
+    if (fromAmount) tweenSet(toTweenRef, setToAmount, toAmount, convert(fromAmount, pt, pf))
   }
 
-  function handleSelectToken(token: CryptoToken, chainId: number) {
+  function handleSelectToken(token: CryptoToken, chainId: number | null) {
     if (modalFor === "from") {
       setFromToken(token)
       setFromChainId(chainId)
-      if (fromAmount) setToAmount(convert(fromAmount, token, toToken))
+      if (fromAmount) tweenSet(toTweenRef, setToAmount, toAmount, convert(fromAmount, token, toToken))
     } else {
       setToToken(token)
       setToChainId(chainId)
-      if (fromAmount) setToAmount(convert(fromAmount, fromToken, token))
+      if (fromAmount) tweenSet(toTweenRef, setToAmount, toAmount, convert(fromAmount, fromToken, token))
     }
     setModalFor(null)
   }
 
-  // Across fee fetch
+  // Across fee fetch — debounced 600ms after the last input change. The setState
+  // calls in the guard branch clear stale fee data when inputs become invalid;
+  // the inner setTimeout updates state asynchronously after the API responds.
+  // Syncing local cache to an external API result is exactly what effects are
+  // for; the rule's heuristic doesn't recognize the debounced-fetch shape.
   useEffect(() => {
     if (!fromToken || !toToken || !fromChainId || !toChainId || !fromAmount || parseFloat(fromAmount) <= 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAcrossFee(null); setAcrossTime(null); setAcrossSource(null); return
     }
     const t = setTimeout(async () => {
@@ -280,14 +325,16 @@ function Bridge({ tokens, loading, wallet, onOpenWallet }: BridgeProps) {
         </div>
       </motion.div>
 
-      {/* ── Converter card ── */}
+      {/* ── Converter card — truly transparent, stars visible behind ── */}
+      <div className="w-full max-w-[520px] lg:max-w-[440px] mx-auto lg:mx-0 flex-shrink-0 flex flex-col gap-3">
       <motion.div
-        className="w-full max-w-[520px] lg:max-w-[440px] mx-auto lg:mx-0 flex-shrink-0 relative overflow-hidden flex flex-col gap-5 p-5 sm:p-6"
+        className="w-full relative overflow-hidden flex flex-col gap-5 p-5 sm:p-6"
         style={{
-          background: "var(--glass-strong)",
+          background: "rgba(255,255,255,0.035)",
           border: "1px solid var(--glass-border)",
           borderRadius: 24,
-          backdropFilter: "blur(32px)",
+          backdropFilter: "blur(8px) saturate(140%)",
+          WebkitBackdropFilter: "blur(8px) saturate(140%)",
           animation: "float 6s ease-in-out infinite",
         }}
         initial={{ opacity: 0, y: 40 }}
@@ -335,7 +382,7 @@ function Bridge({ tokens, loading, wallet, onOpenWallet }: BridgeProps) {
               />
               <div className="flex items-center justify-between gap-2 mt-1 text-xs" style={{ color: "var(--text-dim)" }}>
                 <span className="num">
-                  {fromToken && fromAmount
+                  {fromToken && fromAmount && parseFloat(fromAmount) > 0
                     ? `≈ $${(parseFloat(fromAmount) * fromToken.priceUsd).toLocaleString("en-US", { maximumFractionDigits: 2 })}`
                     : ""}
                 </span>
@@ -375,7 +422,7 @@ function Bridge({ tokens, loading, wallet, onOpenWallet }: BridgeProps) {
                 className="bg-transparent outline-none w-full num"
                 style={{ fontSize: "1.55rem", fontWeight: 600, color: "var(--text)", letterSpacing: "-0.02em" }}
               />
-              {toToken && toAmount && (
+              {toToken && toAmount && parseFloat(toAmount) > 0 && (
                 <span className="text-xs mt-1 num" style={{ color: "var(--text-dim)" }}>
                   ≈ ${(parseFloat(toAmount) * toToken.priceUsd).toLocaleString("en-US", { maximumFractionDigits: 2 })}
                 </span>
@@ -443,7 +490,7 @@ function Bridge({ tokens, loading, wallet, onOpenWallet }: BridgeProps) {
           const insufficient = !!wallet && amt > 0 && amt > balance
 
           let label: string
-          let icon: ReactNode = <FaArrowRight className="text-xs" />
+          let icon: ReactNode = null
           let disabled = false
           let tone: "primary" | "muted" | "danger" = "primary"
 
@@ -472,24 +519,24 @@ function Bridge({ tokens, loading, wallet, onOpenWallet }: BridgeProps) {
             label = `Bridge ${fromToken.symbol.toUpperCase()}`
           }
 
-          const bg =
-            tone === "danger"
-              ? "rgba(255,77,109,0.12)"
-              : tone === "muted"
-              ? "rgba(255,255,255,0.06)"
-              : "linear-gradient(135deg, var(--cyan), #00b8a0)"
-          const color =
-            tone === "danger" ? "var(--red)" : tone === "muted" ? "var(--text-muted)" : "#050b14"
-          const border =
-            tone === "danger"
-              ? "1px solid rgba(255,77,109,0.3)"
-              : tone === "muted"
-              ? "1px solid var(--glass-border)"
-              : "none"
-          const shadow =
-            tone === "primary" ? "0 8px 30px rgba(0,245,212,0.25)" : "none"
-
           const canBridge = !disabled && !!wallet && !!fromToken && !!toToken && amt > 0 && !insufficient
+
+          // Base class selects the right liquid-glass variant per tone
+          const toneClass =
+            tone === "primary" ? "liquid-glass-cta"
+            : tone === "danger" ? ""
+            : "liquid-glass-button"
+
+          const toneStyle: React.CSSProperties =
+            tone === "danger"
+              ? {
+                  background: "rgba(255,77,109,0.12)",
+                  border: "1px solid rgba(255,77,109,0.3)",
+                  color: "var(--red)",
+                }
+              : tone === "muted"
+              ? { color: "var(--text-muted)" }
+              : {} // primary gets everything from liquid-glass-cta
 
           return (
             <button
@@ -498,40 +545,27 @@ function Bridge({ tokens, loading, wallet, onOpenWallet }: BridgeProps) {
                 if (canBridge) setReviewOpen(true)
               }}
               disabled={disabled}
-              className="group relative w-full flex items-center justify-center rounded-xl font-bold transition-all py-3 px-6 text-[0.92rem] tracking-[0.02em] overflow-hidden"
+              className={`relative w-full flex items-center justify-center gap-2 rounded-xl font-bold py-3 px-6 text-[0.92rem] tracking-[0.02em] overflow-hidden ${toneClass}`}
               style={{
-                background: bg,
-                color,
-                border,
-                boxShadow: shadow,
+                ...toneStyle,
                 fontFamily: "var(--font-head)",
                 cursor: disabled ? "not-allowed" : "pointer",
                 opacity: disabled && tone === "muted" ? 0.85 : 1,
               }}
             >
-              {/* Label sits center; chevron slides out to the right on hover */}
-              <span className="flex items-center gap-2 transition-transform duration-300 group-hover:-translate-x-3">
-                {icon}
-                {label}
-              </span>
-              {!disabled && tone === "primary" && (
-                <span
-                  className="absolute right-5 opacity-0 -translate-x-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0"
-                >
-                  <FaArrowRight className="text-sm" />
-                </span>
-              )}
+              {icon}
+              <span>{label}</span>
             </button>
           )
         })()}
 
       </motion.div>
+      </div>
 
       {/* Token Modal */}
       <AnimatePresence>
         {modalFor && (
-          <TokenModal tokens={tokens} onSelect={handleSelectToken} onClose={() => setModalFor(null)}
-            exclude={modalFor === "from" ? toToken?.id : fromToken?.id} />
+          <TokenModal tokens={tokens} onSelect={handleSelectToken} onClose={() => setModalFor(null)} />
         )}
       </AnimatePresence>
 

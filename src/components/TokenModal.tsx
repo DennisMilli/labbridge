@@ -1,27 +1,45 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
+import type { ReactNode } from "react"
 import { motion } from "framer-motion"
 import { FaMagnifyingGlass, FaXmark } from "react-icons/fa6"
 import type { CryptoToken } from "../App"
 import { ChainIcon, AllChainsIcon } from "../icons/ChainIcons"
 import { TokenWithChain } from "../icons/TokenWithChain"
 
+// Tiny section divider — used between "Bridgeable" and "Popular" lists.
+// Defined at module scope (not inside the component) to avoid React's
+// "components created during render" warning.
+function SectionLabel({ children, hint }: { children: ReactNode; hint?: string }) {
+  return (
+    <div className="flex items-center gap-2 px-3 pt-2 pb-1">
+      <span className="text-[0.6rem] uppercase font-bold" style={{ color: "var(--text-muted)", letterSpacing: "0.12em" }}>
+        {children}
+      </span>
+      {hint && (
+        <span className="text-[0.6rem]" style={{ color: "var(--text-dim)" }}>· {hint}</span>
+      )}
+      <div className="flex-1 h-px" style={{ background: "var(--glass-border)" }} />
+    </div>
+  )
+}
+
 const CHAINS = [
-  { id: 0,     name: "All Chains" },
-  { id: 1,     name: "Ethereum"   },
-  { id: 42161, name: "Arbitrum"   },
-  { id: 137,   name: "Polygon"    },
-  { id: 8453,  name: "Base"       },
-  { id: 10,    name: "Optimism"   },
+  { id: 0,              name: "All Chains" },
+  { id: 1,              name: "Ethereum"   },
+  { id: 42161,          name: "Arbitrum"   },
+  { id: 137,            name: "Polygon"    },
+  { id: 8453,           name: "Base"       },
+  { id: 10,             name: "Optimism"   },
+  { id: 34268394551451, name: "Solana"     },
 ]
 
 interface TokenModalProps {
   tokens: CryptoToken[]
-  onSelect: (token: CryptoToken, chainId: number) => void
+  onSelect: (token: CryptoToken, chainId: number | null) => void
   onClose: () => void
-  exclude?: string
 }
 
-function TokenModal({ tokens, onSelect, onClose, exclude }: TokenModalProps) {
+function TokenModal({ tokens, onSelect, onClose }: TokenModalProps) {
   const [search, setSearch] = useState("")
   const [selectedChain, setSelectedChain] = useState(0)
 
@@ -32,15 +50,91 @@ function TokenModal({ tokens, onSelect, onClose, exclude }: TokenModalProps) {
     return () => { document.body.style.overflow = prev }
   }, [])
 
-  const filtered = tokens.filter(t => {
-    if (t.id === exclude) return false
-    if (selectedChain !== 0 && !t.chainIds.includes(selectedChain)) return false
-    if (search) {
-      const q = search.toLowerCase()
-      return t.symbol.toLowerCase().includes(q) || t.name.toLowerCase().includes(q)
+  // ── Filter by chain + search, then split bridgeable vs popular for display ─
+  // When user picks a specific chain, only tokens on that chain qualify, which
+  // naturally hides non-bridgeable tokens (their chainIds is []). On "All
+  // Chains" we show everything but visually separate the two groups.
+  const { bridgeable, popular } = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    const matchesSearch = (t: CryptoToken) =>
+      !q || t.symbol.toLowerCase().includes(q) || t.name.toLowerCase().includes(q)
+    const matchesChain = (t: CryptoToken) =>
+      selectedChain === 0 || t.chainIds.includes(selectedChain)
+
+    const filtered = tokens.filter(t => matchesChain(t) && matchesSearch(t))
+    return {
+      bridgeable: filtered.filter(t => t.bridgeable),
+      popular:    filtered.filter(t => !t.bridgeable),
     }
-    return true
-  })
+  }, [tokens, search, selectedChain])
+
+  function handlePick(token: CryptoToken) {
+    // For bridgeable tokens: prefer the chain the user filtered to, else first.
+    // For non-bridgeable tokens: pass null — Bridge will show "Route not
+    // supported" on quote, which is the honest state of affairs.
+    if (!token.bridgeable || token.chainIds.length === 0) {
+      onSelect(token, null)
+      return
+    }
+    const chainId = selectedChain !== 0 && token.chainIds.includes(selectedChain)
+      ? selectedChain
+      : token.chainIds[0]
+    onSelect(token, chainId)
+  }
+
+  // Renders one token row. Index drives the staggered enter animation.
+  const renderRow = (token: CryptoToken, i: number) => (
+    <motion.button
+      key={token.id}
+      onClick={() => handlePick(token)}
+      className="flex items-center gap-3 p-3 rounded-xl transition-colors text-left w-full cursor-pointer"
+      style={{ background: "transparent" }}
+      whileHover={{ background: "rgba(255,255,255,0.05)" }}
+      initial={{ opacity: 0, x: 10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: Math.min(i * 0.012, 0.15) }}
+    >
+      <TokenWithChain
+        logo={token.logo}
+        symbol={token.symbol}
+        chainId={
+          token.bridgeable && token.chainIds.length > 0
+            ? (selectedChain !== 0 && token.chainIds.includes(selectedChain)
+                ? selectedChain
+                : token.chainIds[0])
+            : null
+        }
+        size={36}
+      />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <p className="font-semibold text-sm truncate" style={{ color: "var(--text)", fontFamily: "var(--font-head)" }}>{token.symbol.toUpperCase()}</p>
+          {token.bridgeable && (
+            <span
+              className="text-[0.55rem] font-bold px-1.5 py-0.5 rounded"
+              style={{
+                background: "var(--cyan-dim)",
+                color: "var(--cyan)",
+                border: "1px solid rgba(0,245,212,0.25)",
+                letterSpacing: "0.06em",
+              }}
+            >
+              BRIDGE
+            </span>
+          )}
+        </div>
+        <p className="text-xs truncate" style={{ color: "var(--text-muted)" }}>{token.name}</p>
+      </div>
+      <div className="text-right flex-shrink-0">
+        <p className="text-xs font-medium num" style={{ color: "var(--text)" }}>${token.priceUsd.toLocaleString("en-US", { maximumFractionDigits: 2 })}</p>
+        <p className="text-xs font-medium num" style={{ color: token.change24h >= 0 ? "var(--green)" : "var(--red)" }}>
+          {token.change24h >= 0 ? "+" : ""}{token.change24h.toFixed(2)}%
+        </p>
+      </div>
+    </motion.button>
+  )
+
+  const empty = bridgeable.length === 0 && popular.length === 0
 
   return (
     <>
@@ -137,51 +231,25 @@ function TokenModal({ tokens, onSelect, onClose, exclude }: TokenModalProps) {
 
           {/* Token list — right panel */}
           <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-1">
-            {filtered.length === 0 ? (
+            {empty ? (
               <div className="flex flex-col items-center justify-center h-32 text-sm" style={{ color: "var(--text-muted)" }}>
                 <p>No tokens found</p>
               </div>
             ) : (
-              filtered.map((token, i) => (
-                <motion.button
-                  key={token.id}
-                  onClick={() => {
-                    // If user filtered to a chain the token supports, use that.
-                    // Otherwise fall back to the token's first chain.
-                    const chainId = selectedChain !== 0 && token.chainIds.includes(selectedChain)
-                      ? selectedChain
-                      : token.chainIds[0]
-                    onSelect(token, chainId)
-                  }}
-                  className="flex items-center gap-3 p-3 rounded-xl transition-colors text-left w-full cursor-pointer"
-                  style={{ background: "transparent" }}
-                  whileHover={{ background: "rgba(255,255,255,0.05)" }}
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: Math.min(i * 0.012, 0.15) }}
-                >
-                  <TokenWithChain
-                    logo={token.logo}
-                    symbol={token.symbol}
-                    chainId={
-                      selectedChain !== 0 && token.chainIds.includes(selectedChain)
-                        ? selectedChain
-                        : token.chainIds[0]
-                    }
-                    size={36}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm truncate" style={{ color: "var(--text)", fontFamily: "var(--font-head)" }}>{token.symbol.toUpperCase()}</p>
-                    <p className="text-xs truncate" style={{ color: "var(--text-muted)" }}>{token.name}</p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-xs font-medium num" style={{ color: "var(--text)" }}>${token.priceUsd.toLocaleString("en-US", { maximumFractionDigits: 2 })}</p>
-                    <p className="text-xs font-medium num" style={{ color: token.change24h >= 0 ? "var(--green)" : "var(--red)" }}>
-                      {token.change24h >= 0 ? "+" : ""}{token.change24h.toFixed(2)}%
-                    </p>
-                  </div>
-                </motion.button>
-              ))
+              <>
+                {bridgeable.length > 0 && (
+                  <>
+                    <SectionLabel hint="Across Protocol">Bridgeable</SectionLabel>
+                    {bridgeable.map(renderRow)}
+                  </>
+                )}
+                {popular.length > 0 && selectedChain === 0 && (
+                  <>
+                    <SectionLabel hint="display only">Popular</SectionLabel>
+                    {popular.map((t, i) => renderRow(t, bridgeable.length + i))}
+                  </>
+                )}
+              </>
             )}
           </div>
         </div>

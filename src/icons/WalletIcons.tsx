@@ -99,7 +99,10 @@ export function BraveWalletIcon({ size = 32, className }: IconProps) {
   )
 }
 
-export const WALLET_ICONS = {
+// Internal-only — not exported, so this file stays "components only" for Vite
+// Fast Refresh. If a consumer later needs the map or the WalletName type,
+// extract them into a separate `walletMeta.ts` file.
+const WALLET_ICONS = {
   MetaMask:          MetaMaskIcon,
   "Coinbase Wallet": CoinbaseWalletIcon,
   WalletConnect:     WalletConnectIcon,
@@ -107,8 +110,6 @@ export const WALLET_ICONS = {
   Phantom:           PhantomIcon,
   "Brave Wallet":    BraveWalletIcon,
 } as const
-
-export type WalletName = keyof typeof WALLET_ICONS
 
 export function WalletIcon({ name, size = 32, className }: { name: string; size?: number; className?: string }) {
   const Icon = (WALLET_ICONS as Record<string, (p: IconProps) => ReactElement>)[name]

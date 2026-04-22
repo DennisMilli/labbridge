@@ -14,7 +14,8 @@ export interface CryptoToken {
   logo: string
   priceUsd: number
   change24h: number
-  chainIds: number[]
+  chainIds: number[]     // empty array when not bridgeable via Across
+  bridgeable: boolean    // true = Across can bridge this same-asset cross-chain
 }
 
 export interface TickerItem {
